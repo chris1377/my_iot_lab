@@ -58,3 +58,12 @@ Il codice C++ utilizza la libreria `PubSubClient` di Nick O'Leary.
 * Per leggere i sensori: `mosquitto_sub -t "laboratorio/sensori"`
 * Per accendere il LED: `mosquitto_pub -t "laboratorio/attuatori/led" -m "ON"`
 * Per spegnere il LED: `mosquitto_pub -t "laboratorio/attuatori/led" -m "OFF"`
+
+## 📝 Appunti di Sviluppo e Best Practice
+
+Durante lo sviluppo sono emerse due considerazioni architettoniche fondamentali:
+
+* **Struttura dei Topic (Payload vs Topic):** Esistono due approcci per inviare comandi. 
+  * *Basato sul Payload* (quello usato nello sketch principale): un solo topic a cui inviare messaggi di stato (es. invio `ON` o `OFF` a `.../led`).
+  * *Basato sul Topic:* creare percorsi specifici per l'azione (es. `.../led/accendi` e `.../led/spegni`), ignorando il contenuto del messaggio. Molto utile per scalare i comandi usando l'abbonamento jolly `.../led/#`.
+* **Resilienza di Rete (Il Subscribe nel Loop):** L'istruzione `mqttClient.subscribe()` non si trova nel `setup()`, ma all'interno del `loop()` nel blocco di controllo della connessione `if (!mqttClient.connected())`. Questa è una regola d'oro per l'IoT: in caso di caduta momentanea del Wi-Fi o del Broker, al momento della riconnessione l'Arduino rinnova automaticamente i suoi abbonamenti. Se fosse stato nel `setup()`, a seguito di una disconnessione l'Arduino sarebbe diventato cieco ai nuovi comandi fino al successivo riavvio fisico.
