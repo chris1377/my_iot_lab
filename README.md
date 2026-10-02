@@ -116,4 +116,14 @@ Poiché il server Node-RED e il Broker MQTT sono ospitati sul PC Linux (il nostr
    `http://<IP_DEL_PC_LINUX>:1880/dashboard`
 
 
+## 📡 Nodo Sensore Distribuito (ESP8266)
+
+L'architettura è stata espansa verso un vero ecosistema IoT distribuito ("Triangolo IoT") introducendo un microcontrollore **ESP8266 (NodeMCU)** con connettività Wi-Fi nativa.
+
+* **Ruolo:** Agisce come nodo sensore remoto puro. Raccoglie dati ambientali (es. temperatura) e li pubblica sul Broker via Wi-Fi.
+* **Topic MQTT:** `laboratorio/esp/temperatura`
+* **Logica Distribuita:** L'ESP8266 funziona solo come *Publisher*. Il PC Linux (Node-RED) riceve le letture, popola la Dashboard e gestisce la logica decisionale, mentre l'Arduino (in ascolto come *Subscriber*) si occupa solo di eseguire le azioni fisiche.
+
+*Nota hardware: Il modulo ESP8266 utilizza l'antenna a 2.4 GHz, pertanto l'infrastruttura di rete (router o hotspot) deve supportare questa banda per consentire la connessione.*
+
 

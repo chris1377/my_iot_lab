@@ -69,6 +69,7 @@ void loop() {
     
     mqttClient.publish("laboratorio/sensori", messaggio.c_str());
     
+    
     ultimoInvio = millis(); // Azzeriamo il cronometro
   }
 }
