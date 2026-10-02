@@ -106,4 +106,14 @@ Node-RED gestisce in contemporanea le decisioni automatiche e i comandi manuali,
 3. **Cancello Logico (Override):** I dati in arrivo dal sensore passano prima attraverso un nodo `switch` di blocco che legge la memoria `flow`. Se la variabile contiene "ON", la regola di sbarramento (`!= ON`) distrugge i dati del sensore. Questo meccanismo garantisce che il comando manuale abbia la priorità assoluta sull'automazione ambientale.
 
 
+### 📱 Accesso da Smartphone (Rete Locale)
+
+Poiché il server Node-RED e il Broker MQTT sono ospitati sul PC Linux (il nostro nodo Edge), l'interfaccia grafica è accessibile da qualsiasi dispositivo (come uno smartphone o un tablet) connesso alla stessa rete Wi-Fi.
+    
+1. Trova l'indirizzo IP locale del PC Linux eseguendo nel terminale: 
+   `hostname -I`
+2. Apri il browser sullo smartphone e digita l'indirizzo usando l'IP appena trovato: 
+   `http://<IP_DEL_PC_LINUX>:1880/dashboard`
+
+
 
