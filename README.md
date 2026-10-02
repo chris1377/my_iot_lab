@@ -76,3 +76,18 @@ Durante lo sviluppo sono emerse due considerazioni architettoniche fondamentali:
     mosquitto_pub -t "laboratorio/attuatori/led/spegni" -m ""
     ```
 * **Resilienza di Rete (Il Subscribe nel Loop):** L'istruzione `mqttClient.subscribe()` non si trova nel `setup()`, ma all'interno del `loop()` nel blocco di controllo della connessione `if (!mqttClient.connected())`. Questa è una regola d'oro per l'IoT: in caso di caduta momentanea del Wi-Fi o del Broker, al momento della riconnessione l'Arduino rinnova automaticamente i suoi abbonamenti. Se fosse stato nel `setup()`, a seguito di una disconnessione l'Arduino sarebbe diventato cieco ai nuovi comandi fino al riavvio fisico.
+
+ ## 🧠 Automazione Edge (Python)
+
+Per rendere il sistema intelligente e autonomo, abbiamo affiancato ad Arduino uno script in Python in esecuzione sul nodo Edge (il PC Linux). Questo script funge da "Cervello": ascolta costantemente i dati del sensore di luminosità tramite MQTT e prende decisioni automatiche.
+
+**Requisiti:**
+Libreria Paho MQTT. Su sistemi basati su Debian/Ubuntu si installa con:
+`sudo apt install python3-paho-mqtt`
+
+**Logica di funzionamento (`cervello_edge.py`):**
+Lo script si connette al Broker locale (`127.0.0.1`), si abbona al topic `laboratorio/sensori` e decodifica il payload dei messaggi.
+Se il valore della luce scende sotto una soglia prestabilita (es. 300), lo script pubblica in automatico il comando `ON` sul topic `laboratorio/attuatori/led` per accendere la luce. Quando il valore torna sopra la soglia, pubblica `OFF`.
+
+
+

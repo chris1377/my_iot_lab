@@ -51,7 +51,7 @@ void loop() {
       mqttClient.subscribe("laboratorio/attuatori/led");
       
     } else {
-      delay(2000);
+      delay(300);
       return; 
     }
   }
@@ -62,9 +62,10 @@ void loop() {
   // 3. INVIO DATI SENZA BLOCCARE L'ARDUINO (Usando millis)
   static unsigned long ultimoInvio = 0; // Memoria del cronometro
   
-  if (millis() - ultimoInvio > 2000) {  // Se sono passati 2000 millisecondi
+  if (millis() - ultimoInvio > 300) {  // Se sono passati 2000 millisecondi
     int luce = analogRead(A0);
     String messaggio = String(luce);
+    
     
     mqttClient.publish("laboratorio/sensori", messaggio.c_str());
     
