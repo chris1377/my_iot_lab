@@ -90,4 +90,20 @@ Lo script si connette al Broker locale (`127.0.0.1`), si abbona al topic `labora
 Se il valore della luce scende sotto una soglia prestabilita (es. 300), lo script pubblica in automatico il comando `ON` sul topic `laboratorio/attuatori/led` per accendere la luce. Quando il valore torna sopra la soglia, pubblica `OFF`.
 
 
+## 🌐 Interfaccia Grafica e Logica Avanzata (Node-RED)
+
+L'automazione in Python è stata sostituita e potenziata tramite **Node-RED**, un motore logico visivo che funge sia da "cervello" del sistema che da interfaccia grafica SCADA (Supervisory Control And Data Acquisition).
+
+**Accesso al Sistema:**
+* Motore: si avvia da terminale con il comando `node-red`
+* Editor Visivo: `http://127.0.0.1:1880`
+* Dashboard Web: `http://127.0.0.1:1880/dashboard` (creata tramite il pacchetto `@flowfuse/node-red-dashboard`)
+
+**Logica del Flusso (Macchina a Stati e Override):**
+Node-RED gestisce in contemporanea le decisioni automatiche e i comandi manuali, prevenendo conflitti tramite un sistema di priorità:
+1. **Automazione:** I valori in arrivo dal topic `laboratorio/sensori` vengono passati in un nodo `switch`. Se il `msg.payload` è `< 300`, viene inviato il comando `ON` al LED, altrimenti `OFF`.
+2. **Memoria di Stato:** Quando l'utente aziona l'interruttore dalla Dashboard, il nuovo stato ("ON" o "OFF") viene salvato nella memoria a lungo termine di Node-RED, all'interno della variabile globale `flow.stato_manuale`.
+3. **Cancello Logico (Override):** I dati in arrivo dal sensore passano prima attraverso un nodo `switch` di blocco che legge la memoria `flow`. Se la variabile contiene "ON", la regola di sbarramento (`!= ON`) distrugge i dati del sensore. Questo meccanismo garantisce che il comando manuale abbia la priorità assoluta sull'automazione ambientale.
+
+
 
