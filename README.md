@@ -126,4 +126,53 @@ L'architettura è stata espansa verso un vero ecosistema IoT distribuito ("Trian
 
 *Nota hardware: Il modulo ESP8266 utilizza l'antenna a 2.4 GHz, pertanto l'infrastruttura di rete (router o hotspot) deve supportare questa banda per consentire la connessione.*
 
+i# Progetti 4 e 5: Da Metronomo Offline a Dispositivo IoT
 
+Questo repository contiene due evoluzioni di un metronomo digitale sviluppato su **Arduino UNO R4 WiFi**. Il progetto parte da una logica hardware basata sul calcolo dei tempi di pressione (Progetto 4) per poi evolversi in un vero e proprio dispositivo IoT connesso in rete e controllabile via web (Progetto 5).
+
+---
+
+## 🛠️ Progetto 4: Metronomo Offline (Solo Scheda)
+
+Il Progetto 4 realizza un metronomo stand-alone completamente funzionale. L'utente interagisce fisicamente con la breadboard per impostare il ritmo tramite il tocco ("Tap Tempo") e il sistema restituisce un feedback visivo lampeggiando a tempo.
+
+### Componenti e Cablaggio
+*   **Arduino UNO R4 WiFi**
+*   **Pulsante Mode (Pin 4):** Alterna tra la modalità di registrazione e quella di riproduzione. Collegato a GND sfruttando la resistenza interna `INPUT_PULLUP`.
+*   **Pulsante Tap (Pin 5):** Utilizzato per battere il tempo. Collegato a GND (`INPUT_PULLUP`).
+*   **LED Rosso (Pin 9):** Indicatore visivo della modalità "Learn" (Registrazione). Pulsa a ogni tap registrato.
+*   **LED Verde (Pin 8):** Indicatore visivo della modalità "Play". Lampeggia a ritmo seguendo i BPM calcolati. (Richiede resistenza da 220Ω/330Ω in serie verso GND).
+
+### Funzionamento e Logica
+Il codice gestisce gli input hardware superando il problema del "rimbalzo" (debounce) meccanico tramite il trucco dello *State Change Detection* (rilevamento della variazione di stato) e affidandosi alla funzione `millis()` per operazioni non bloccanti.
+
+1.  **Modalità LEARN:** Entrando in questa modalità, l'utente preme il pulsante Tap a ritmo. Il sistema richiede un **minimo di 4 tocchi validi**. Arduino salva in un array (fino a 10 elementi) i timestamp in millisecondi di ogni pressione.
+2.  **Calcolo Matematico:** Passando alla modalità Play, il sistema sottrae il tempo del primo tap dall'ultimo, divide per il numero di intervalli e calcola la media in millisecondi. Da questa estrae i **BPM (Battiti Per Minuto)** dividendo 60.000 per l'intervallo medio.
+3.  **Modalità PLAY:** Il LED verde si accende e spegne in modo asincrono (sempre usando `millis()`), garantendo che la scheda sia sempre in ascolto per eventuali nuovi input utente.
+
+---
+
+## 🌐 Progetto 5: Metronomo IoT (API REST)
+
+Il Progetto 5 prende la base hardware ed elettronica del Progetto 4 e la espande integrandola alla rete locale. Grazie al modulo Wi-Fi della UNO R4, il metronomo diventa un Web Server capace di rispondere a richieste HTTP esterne, tracciare le statistiche (BPM minimo e massimo) ed essere controllato da un'interfaccia grafica.
+
+### Prerequisiti
+*   Libreria ufficiale: `<WiFiS3.h>`
+*   Modifica delle variabili globali nel codice per inserire le credenziali della propria rete (`ssid` e `pass`).
+*   Pagina HTML/JS (Dashboard) da avviare in locale per interfacciarsi comodamente con le API.
+
+### Architettura Server e CORS
+Il web server su Arduino (in ascolto sulla porta 80) implementa un ciclo di lettura personalizzato che elabora in modo differenziato le richieste GET/DELETE e quelle PUT. Per permettere a una pagina web locale (HTML) di comunicare direttamente con la scheda senza essere bloccata dai sistemi di sicurezza del browser, il server espone intestazioni specifiche:
+*   `Access-Control-Allow-Origin: *`
+*   Gestione della richiesta preliminare di perlustrazione `OPTIONS`.
+
+### Endpoints API REST Esposti
+
+| Metodo HTTP | Endpoint | Azione Eseguita dal Server Arduino |
+| :--- | :--- | :--- |
+| **GET** | `/bpm/` | Restituisce il valore del BPM correntemente in riproduzione. |
+| **PUT** | `/bpm/` | Riceve un nuovo valore BPM nel corpo della richiesta (Body), aggiorna la velocità di lampeggio del LED verde e aggiorna eventuali record. |
+| **GET** | `/bpm/min/` | Restituisce il valore del BPM più basso mai registrato dall'accensione. |
+| **DELETE** | `/bpm/min/` | Azzera la variabile globale del record minimo (imposta a 0). |
+| **GET** | `/bpm/max/` | Restituisce il valore del BPM più alto mai registrato dall'accensione. |
+| **DELETE** | `/bpm/max/` | Azzera la variabile globale del record massimo (imposta a 0). |

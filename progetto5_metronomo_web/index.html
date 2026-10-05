@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Metronomo IoT Dashboard</title>
+    <style>
+        body { font-family: Arial; text-align: center; margin-top: 50px; }
+        .box { border: 1px solid #ccc; padding: 20px; display: inline-block; margin: 10px; border-radius: 10px; }
+        button { padding: 10px; margin: 5px; cursor: pointer; }
+        input { padding: 10px; width: 60px; }
+    </style>
+</head>
+<body>
+
+    <h1>Pannello di Controllo Metronomo</h1>
+
+    <div class="box">
+        <h2>BPM Attuale: <span id="valoreBPM">--</span></h2>
+        <button onclick="leggiDato('bpm', 'valoreBPM')">Aggiorna BPM</button>
+        <br><br>
+        <input type="number" id="inputBPM" placeholder="Es. 120">
+        <button onclick="impostaBPM()">Imposta Nuovo Ritmo</button>
+    </div>
+
+    <div class="box">
+        <h2>Record Minimo: <span id="valoreMin">--</span></h2>
+        <button onclick="leggiDato('bpm/min', 'valoreMin')">Aggiorna Min</button>
+        <button onclick="cancellaDato('bpm/min', 'valoreMin')">Resetta Min</button>
+    </div>
+
+    <div class="box">
+        <h2>Record Massimo: <span id="valoreMax">--</span></h2>
+        <button onclick="leggiDato('bpm/max', 'valoreMax')">Aggiorna Max</button>
+        <button onclick="cancellaDato('bpm/max', 'valoreMax')">Resetta Max</button>
+    </div>
+
+    <script>
+        // SOSTITUISCI QUESTO INDIRIZZO CON L'IP DELLA TUA ARDUINO UNO R4 WIFI
+        const ipArduino = "http://10.42.0.34"; 
+
+        // Funzione generica per le chiamate GET
+        function leggiDato(endpoint, idHtml) {
+            fetch(`${ipArduino}/${endpoint}/`)
+                .then(response => response.text())
+                .then(data => document.getElementById(idHtml).innerText = data)
+                .catch(error => alert("Errore di connessione ad Arduino"));
+        }
+
+        // Funzione generica per le chiamate DELETE
+        function cancellaDato(endpoint, idHtml) {
+            fetch(`${ipArduino}/${endpoint}/`, { method: 'DELETE' })
+                .then(response => response.text())
+                .then(data => document.getElementById(idHtml).innerText = data)
+                .catch(error => alert("Errore di connessione ad Arduino"));
+        }
+
+        // Funzione per la chiamata PUT
+        function impostaBPM() {
+            let nuovoValore = document.getElementById('inputBPM').value;
+            if(!nuovoValore) return alert("Inserisci un numero!");
+
+            fetch(`${ipArduino}/bpm/`, {
+                method: 'PUT',
+                body: nuovoValore
+            })
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('valoreBPM').innerText = data;
+                alert("Nuovo BPM inviato ad Arduino!");
+            })
+            .catch(error => alert("Errore durante l'invio"));
+        }
+    </script>
+
+</body>
+</html>
