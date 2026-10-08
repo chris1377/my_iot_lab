@@ -215,3 +215,92 @@ Per far funzionare correttamente il flusso importato su Node-RED, è necessario 
 Il progetto include modifiche al layout standard di Node-RED Dashboard 2.0:
 * Utilizzo del pannello **Layout** per l'organizzazione in gruppi e la spaziatura manuale (tramite le proporzioni `Size`, es. 3x1, 6x1).
 * Modifiche CSS custom per allineare caselle di testo e pulsanti sulla stessa riga e centrare gli elementi chiave per una migliore User Experience.
+
+# 🎵 Proetto7 - Metronomo IoT (Arduino UNO R4 WiFi + Node-RED)
+
+Questo progetto trasforma un **Arduino UNO R4 WiFi** in un metronomo intelligente e connesso. Può essere controllato interamente tramite pulsanti fisici oppure da remoto attraverso una comoda interfaccia web (Dashboard) basata su **Node-RED** via protocollo MQTT.
+
+Il sistema è progettato per essere **resiliente**: funziona perfettamente anche **offline**. Se la rete WiFi cade o non è disponibile, il metronomo entra in modalità standalone, permettendoti di continuare a suonare senza interruzioni.
+
+---
+
+## ✨ Funzionalità Principali
+
+* 📶 **Controllo Bidirezionale:** Sincronizzazione in tempo reale tra hardware fisico e Dashboard Node-RED.
+* 🥁 **Tap Tempo (Smart):** Calcola automaticamente i BPM battendo il tempo (minimo 4 tap). Attivabile da pulsante fisico o da web.
+* 📴 **Modalità Offline Nativa:** Codice non bloccante. Se non c'è WiFi, il metronomo si avvia offline e cerca la rete in background ogni 5 secondi senza bloccare l'esecuzione.
+* 🔊 **Gestione Audio (Mute):** Cicalino piezoelettrico attivabile/disattivabile a piacimento.
+* 💡 **Feedback Visivo Ricco:**
+  * **LCD 16x2:** Mostra lo stato del WiFi, la modalità (PLAY/REC), lo stato dell'audio e i BPM.
+  * **Matrice LED (UNO R4):** Mostra un'icona a forma di nota musicale quando il suono è attivo; si spegne quando è muto.
+  * **LED Esterni:** LED Verde (lampeggia a tempo con i BPM), LED Rosso (indica la modalità REC/Apprendimento attiva).
+
+---
+
+## 🛠️ Requisiti Hardware
+
+* **Scheda:** Arduino UNO R4 WiFi
+* **Display:** LCD 16x2 (collegamento parallelo standard) con potenziometro per il contrasto.
+* **Audio:** 1x Cicalino Piezoelettrico (Piezo Buzzer).
+* **Indicatori Visivi:** 1x LED Verde, 1x LED Rosso (con resistenze da 220Ω).
+* **Controlli:** 3x Pulsanti tattili (per Mode, Tap e Suono).
+
+### 🔌 Schema Collegamenti (Pinout)
+
+| Componente | Pin Arduino | Note |
+| :--- | :--- | :--- |
+| **Buzzer Piezo** | `A0` | Collegare l'altro pin a GND |
+| **Pulsante Suono (Mute)** | `2` | Collegare l'altro pin a GND (Usa `INPUT_PULLUP`) |
+| **Pulsante Mode (Rec/Play)**| `4` | Collegare l'altro pin a GND (Usa `INPUT_PULLUP`) |
+| **Pulsante Tap Tempo** | `5` | Collegare l'altro pin a GND (Usa `INPUT_PULLUP`) |
+| **LED Verde (Battito)** | `8` | Tramite resistenza 220Ω verso GND |
+| **LED Rosso (Mod. REC)** | `9` | Tramite resistenza 220Ω verso GND |
+| **LCD RS** | `12` | - |
+| **LCD EN** | `11` | - |
+| **LCD D4, D5, D6, D7** | `10, 7, 6, 3`| - |
+
+*(Nota per l'LCD: assicurarsi che i Pin 15 e 16 siano alimentati per la retroilluminazione e il Pin 3 sia collegato a un potenziometro per il contrasto).*
+
+---
+
+## 💻 Software e Librerie
+
+Assicurati di avere installato le seguenti librerie tramite il Library Manager dell'IDE di Arduino:
+
+1. `WiFiS3` (Inclusa nel core dell'UNO R4)
+2. `PubSubClient` (Per la comunicazione MQTT)
+3. `LiquidCrystal` (Per il display LCD 16x2)
+4. `Arduino_LED_Matrix` (Inclusa nel core dell'UNO R4, per i LED integrati)
+
+---
+
+## 🌐 Configurazione Node-RED / MQTT
+
+Il sistema si interfaccia con un broker MQTT (es. Mosquitto) e si aspetta la seguente struttura di Topic per la comunicazione con Node-RED:
+
+### 📥 Topic sottoscritti da Arduino (Comandi RX)
+* `metronomo/bpm/set` : Riceve un numero (es. `120`) per impostare i BPM in riproduzione.
+* `metronomo/suono/set` : Riceve `ON`, `OFF`, `TRUE`, `FALSE`, `1` o `0` per attivare/disattivare il buzzer.
+* `metronomo/stato/set` : Riceve qualsiasi messaggio (es. `TOGGLE`) per entrare o uscire dalla modalità REC.
+* `metronomo/tap/set` : Riceve qualsiasi messaggio per registrare un battito del Tap Tempo (solo se in mod. REC).
+
+### 📤 Topic pubblicati da Arduino (Telemetria TX)
+* `metronomo/bpm` : Invia il BPM attuale (utile per la Dashboard).
+* `metronomo/bpm/min` & `metronomo/bpm/max` : Invia statistiche dei BPM registrati.
+* `metronomo/suono/stato` : Invia `ON` o `OFF` quando lo stato del suono cambia fisicamente (sincronizza l'interruttore web).
+* `metronomo/stato/rec` : Invia `ON` o `OFF` per indicare lo stato della modalità Apprendimento.
+
+### 📦 Importare la Dashboard
+Se hai esportato il flusso di Node-RED in formato `.json`, puoi reimportarlo facilmente dal menu di Node-RED andando su **Menu (tre linee) > Import** e selezionando il file del progetto.
+
+---
+
+## 🚀 Guida all'uso
+
+1. **Accensione:** Alimenta l'Arduino. Sul display apparirà "Avvio Metronomo". La scheda proverà a connettersi al WiFi per 5 secondi. Se ci riesce, si collega ad MQTT; in caso contrario, avvia la **Modalità Offline** e il metronomo è subito utilizzabile.
+2. **Impostare i BPM:** Puoi inviare il valore numerico dalla Dashboard Node-RED.
+3. **Tap Tempo:** 
+   * Premi il tasto fisico **MODE** (o il bottone *Modalità REC/PLAY* sulla Dashboard). Il LED Rosso si accende.
+   * Premi il tasto fisico **TAP** (o il bottone *Batti il tempo* sulla Dashboard) a tempo di musica per **almeno 4 volte**.
+   * Premi nuovamente **MODE**. Il sistema calcolerà la media dei tuoi battiti, applicherà i nuovi BPM e inizierà a lampeggiare/suonare.
+4. **Muto:** Premi il tasto fisico collegato al Pin 2, oppure usa l'interruttore Switch sulla Dashboard per zittire il metronomo (il lampeggio del LED verde continuerà visivamente).
