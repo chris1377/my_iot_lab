@@ -176,3 +176,42 @@ Il web server su Arduino (in ascolto sulla porta 80) implementa un ciclo di lett
 | **DELETE** | `/bpm/min/` | Azzera la variabile globale del record minimo (imposta a 0). |
 | **GET** | `/bpm/max/` | Restituisce il valore del BPM più alto mai registrato dall'accensione. |
 | **DELETE** | `/bpm/max/` | Azzera la variabile globale del record massimo (imposta a 0). |
+
+# Progetto 6: Metronomo IoT con MQTT e Node-RED Dashboard 2.0 (progetto6_metronomo_mqtt)
+
+## 📖 Descrizione
+Questo progetto consiste in un metronomo basato su Arduino, controllabile e monitorabile in tempo reale tramite un'interfaccia web (Dashboard). Il sistema sfrutta il protocollo MQTT per garantire una comunicazione bidirezionale veloce ed efficiente tra l'hardware e l'interfaccia utente costruita su Node-RED.
+
+## 🛠 Architettura del Sistema
+
+### 1. Hardware (Arduino)
+L'unità fisica gestisce la generazione del battito (BPM) e le modalità operative:
+* **Pulsante MODE:** Permette di passare dalla modalità di esecuzione (PLAY) alla modalità di acquisizione/apprendimento (REC/Learn).
+* **LED di Stato:** Feedback visivo fisico sulla breadboard (es. Verde per PLAY, Rosso per REC).
+* **Client MQTT:** Invia lo stato attuale e si mette in ascolto dei nuovi BPM in arrivo.
+
+### 2. Software (Node-RED)
+L'interfaccia di controllo è stata sviluppata utilizzando **Node-RED Dashboard 2.0** (`@flowfuse/node-red-dashboard`).
+* **Input BPM:** Un modulo `ui-form` ottimizzato graficamente per inviare il valore numerico dei BPM desiderati tramite un pulsante dedicato.
+* **Monitoraggio:** Testi dinamici (`ui-text`) che mostrano BPM attuali, BPM Minimo e BPM Massimo.
+* **Feedback Visivo:** Un indicatore `ui-led` che si accende di rosso quando l'hardware entra in modalità REC.
+* **Stile Custom:** Utilizzo del nodo `ui-template` e classi CSS/Vuetify (es. `d-flex`, `justify-center`) per impaginare i componenti in griglie affiancate e personalizzare l'allineamento.
+
+## 📡 Topic MQTT Configurati
+
+Il broker MQTT fa da ponte tra Node-RED e Arduino utilizzando i seguenti topic:
+
+* `metronomo/bpm/set` (Sottoscrizione Arduino / Pubblicazione Node-RED): 
+  Utilizzato per inviare il nuovo valore di BPM dalla dashboard all'hardware.
+* `metronomo/stato/rec` (Pubblicazione Arduino / Sottoscrizione Node-RED): 
+  Invia le stringhe testuali `"ON"` o `"OFF"` quando si preme il pulsante MODE, permettendo al nodo LED sulla dashboard di aggiornarsi in tempo reale.
+
+## 🚀 Requisiti e Dipendenze (Node-RED)
+Per far funzionare correttamente il flusso importato su Node-RED, è necessario installare i seguenti pacchetti dalla *Manage Palette*:
+1. `@flowfuse/node-red-dashboard` (Dashboard 2.0)
+2. `@flowfuse/node-red-dashboard-2-ui-led` (Nodo LED specifico per la nuova interfaccia)
+
+## ⚙️ Layout e Personalizzazione UI
+Il progetto include modifiche al layout standard di Node-RED Dashboard 2.0:
+* Utilizzo del pannello **Layout** per l'organizzazione in gruppi e la spaziatura manuale (tramite le proporzioni `Size`, es. 3x1, 6x1).
+* Modifiche CSS custom per allineare caselle di testo e pulsanti sulla stessa riga e centrare gli elementi chiave per una migliore User Experience.
