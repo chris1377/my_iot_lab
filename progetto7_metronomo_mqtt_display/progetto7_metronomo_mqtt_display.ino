@@ -2,10 +2,11 @@
 #include <PubSubClient.h>
 #include <LiquidCrystal.h>
 #include "Arduino_LED_Matrix.h"
+#include "secrets.h"
 
-char ssid[] = "cloud";
-char pass[] = "password";
-const char* brokerIP = "10.42.0.1"; 
+char ssid[] = SECRET_SSID;
+char pass[] = SECRET_PASS;
+const char* brokerIP = "192.168.1.53"; 
 
 WiFiClient espClient;
 PubSubClient mqttClient(espClient);
