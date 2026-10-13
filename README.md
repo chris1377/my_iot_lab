@@ -1,36 +1,51 @@
-GIT:
-git add .
-git commit -m ""
-git push
+## 🔒 Gestione delle Credenziali Wi-Fi (Sicurezza)
 
+Per evitare di esporre dati sensibili su GitHub, la configurazione della rete in questi progetti viene gestita tramite un file separato. Prima di compilare e caricare i codici Arduino che richiedono l'accesso al Wi-Fi, è necessario eseguire questa operazione:
+
+1. All'interno della cartella del progetto, individua il file chiamato `secrets_template.h`.
+2. Rinomina questo file in `secrets.h`.
+3. Aprilo e inserisci all'interno il nome della tua rete (SSID) e la password del Wi-Fi (o dell'hotspot).
+4. Grazie alla riga `#include "secrets.h" char ssid[] = SECRET_SSID;
+char pass[] = SECRET_PASS; ` presente nello sketch principale, Arduino caricherà in automatico le tue credenziali senza che tu debba scriverle in chiaro nel codice `.ino`. Il file `secrets.h` viene ignorato automaticamente da Git grazie al `.gitignore`.
+
+GIT:
+```bash
+git add .
+git commit -m "Messaggio del commit"
+git push
+```
 
 Avvio connessione WIFI del pc:
 
-Creazione:
+Creazione hotspot:
+```bash
 nmcli device wifi hotspot ssid "cloud" password "password"
+```
+
+---
 
 # Progetto 1: Web Server IoT Locale
 
 Questo è il mio primo progetto IoT. Consiste in un web server locale ospitato su un Arduino Uno R4 WiFi che permette di monitorare un sensore e controllare un attuatore tramite una dashboard accessibile da browser.
 
 ## 🛠️ Hardware Utilizzato
-* Scheda: Arduino Uno R4 WiFi
-* Sensore: Sensore di luce (es. modulo TEMT6000)
-* Attuatore: LED rosso classico
-* Componenti extra: Resistenza (220/330 ohm), breadboard, cavi jumper
+- Scheda: Arduino Uno R4 WiFi
+- Sensore: Sensore di luce (es. modulo TEMT6000)
+- Attuatore: LED rosso classico
+- Componenti extra: Resistenza (220/330 ohm), breadboard, cavi jumper
 
 ## 🔌 Schema dei Collegamenti
-* **Sensore di luce:** 
+- **Sensore di luce:** 
   * VCC -> 5V
   * GND -> GND
   * OUT/Signal -> Pin analogico A0
-* **LED:**
+- **LED:**
   * Gamba lunga (Anodo) -> Pin digitale 8
   * Gamba corta (Catodo) -> GND (tramite resistenza)
 
 ## 💻 Funzionalità del Software
 Lo sketch in C++ utilizza la libreria `<WiFiS3.h>` per:
-1. Connettere l'Arduino a una rete Wi-Fi (o hotspot locale).
+1. Connettere l'Arduino a una rete Wi-Fi leggendo le credenziali dal file `secrets.h`.
 2. Avviare un server HTTP sulla porta 80.
 3. Servire una pagina HTML con stile CSS integrato.
 4. Mostrare il valore della luce in tempo reale (con auto-refresh ogni 2 secondi).
@@ -43,27 +58,27 @@ Lo sketch in C++ utilizza la libreria `<WiFiS3.h>` per:
 Questo secondo step evolve il progetto passando da una classica pagina web (HTTP) al protocollo MQTT. Questo permette una comunicazione istantanea, asincrona e molto più leggera, tipica dei sistemi IoT professionali.
 
 ## 🏗️ Architettura di Rete
-* **Broker MQTT (Postino):** Ospitato sul PC Linux (Edge) tramite il software `mosquitto` (IP locale dell'hotspot: 10.42.0.1).
-* **Nodo IoT:** Arduino Uno R4 WiFi connesso all'hotspot.
+- **Broker MQTT (Postino):** Ospitato sul PC Linux (Edge) tramite il software `mosquitto` (IP locale dell'hotspot: 10.42.0.1).
+- **Nodo IoT:** Arduino Uno R4 WiFi connesso all'hotspot.
 
 ## 📡 Librerie e Funzionamento
 Il codice C++ utilizza la libreria `PubSubClient` di Nick O'Leary.
-* Abbiamo eliminato la funzione bloccante `delay()`, sostituendola con il timer `millis()`, permettendo all'Arduino di essere costantemente in ascolto.
+- Abbiamo eliminato la funzione bloccante `delay()`, sostituendola con il timer `millis()`, permettendo all'Arduino di essere costantemente in ascolto.
 
 ## 💬 Topic MQTT Utilizzati
-* **`laboratorio/sensori` (Publisher):** L'Arduino pubblica automaticamente il valore del sensore di luce ogni 2 secondi.
-* **`laboratorio/attuatori/led` (Subscriber):** L'Arduino è "abbonato" a questo canale. Se riceve il testo `ON` accende il LED sul pin 8, se riceve `OFF` lo spegne immediatamente.
+- **`laboratorio/sensori` (Publisher):** L'Arduino pubblica automaticamente il valore del sensore di luce ogni 2 secondi.
+- **`laboratorio/attuatori/led` (Subscriber):** L'Arduino è "abbonato" a questo canale. Se riceve il testo `ON` accende il LED sul pin 8, se riceve `OFF` lo spegne immediatamente.
 
 ## 💻 Comandi Edge (da Terminale Linux)
-* Per leggere i sensori: `mosquitto_sub -t "laboratorio/sensori"`
-* Per accendere il LED: `mosquitto_pub -t "laboratorio/attuatori/led" -m "ON"`
-* Per spegnere il LED: `mosquitto_pub -t "laboratorio/attuatori/led" -m "OFF"`
+- Per leggere i sensori: `mosquitto_sub -t "laboratorio/sensori"`
+- Per accendere il LED: `mosquitto_pub -t "laboratorio/attuatori/led" -m "ON"`
+- Per spegnere il LED: `mosquitto_pub -t "laboratorio/attuatori/led" -m "OFF"`
 
 ## 📝 Appunti di Sviluppo e Best Practice
 
 Durante lo sviluppo sono emerse due considerazioni architettoniche fondamentali:
 
-* **Struttura dei Topic (Payload vs Topic):** Esistono due approcci per inviare comandi. 
+- **Struttura dei Topic (Payload vs Topic):** Esistono due approcci per inviare comandi. 
   * *Basato sul Payload* (usato nel progetto base): un solo topic a cui inviare messaggi di stato.
   * *Basato sul Topic:* creare percorsi specifici per l'azione, ignorando il contenuto del messaggio. È molto utile per scalare i comandi usando l'abbonamento jolly (`#`).
     In C++, l'abbonamento si fa così:
@@ -75,9 +90,9 @@ Durante lo sviluppo sono emerse due considerazioni architettoniche fondamentali:
     mosquitto_pub -t "laboratorio/attuatori/led/accendi" -m ""
     mosquitto_pub -t "laboratorio/attuatori/led/spegni" -m ""
     ```
-* **Resilienza di Rete (Il Subscribe nel Loop):** L'istruzione `mqttClient.subscribe()` non si trova nel `setup()`, ma all'interno del `loop()` nel blocco di controllo della connessione `if (!mqttClient.connected())`. Questa è una regola d'oro per l'IoT: in caso di caduta momentanea del Wi-Fi o del Broker, al momento della riconnessione l'Arduino rinnova automaticamente i suoi abbonamenti. Se fosse stato nel `setup()`, a seguito di una disconnessione l'Arduino sarebbe diventato cieco ai nuovi comandi fino al riavvio fisico.
+- **Resilienza di Rete (Il Subscribe nel Loop):** L'istruzione `mqttClient.subscribe()` non si trova nel `setup()`, ma all'interno del `loop()` nel blocco di controllo della connessione `if (!mqttClient.connected())`. Questa è una regola d'oro per l'IoT: in caso di caduta momentanea del Wi-Fi o del Broker, al momento della riconnessione l'Arduino rinnova automaticamente i suoi abbonamenti. Se fosse stato nel `setup()`, a seguito di una disconnessione l'Arduino sarebbe diventato cieco ai nuovi comandi fino al riavvio fisico.
 
- ## 🧠 Automazione Edge (Python)
+## 🧠 Automazione Edge (Python)
 
 Per rendere il sistema intelligente e autonomo, abbiamo affiancato ad Arduino uno script in Python in esecuzione sul nodo Edge (il PC Linux). Questo script funge da "Cervello": ascolta costantemente i dati del sensore di luminosità tramite MQTT e prende decisioni automatiche.
 
@@ -89,22 +104,20 @@ Libreria Paho MQTT. Su sistemi basati su Debian/Ubuntu si installa con:
 Lo script si connette al Broker locale (`127.0.0.1`), si abbona al topic `laboratorio/sensori` e decodifica il payload dei messaggi.
 Se il valore della luce scende sotto una soglia prestabilita (es. 300), lo script pubblica in automatico il comando `ON` sul topic `laboratorio/attuatori/led` per accendere la luce. Quando il valore torna sopra la soglia, pubblica `OFF`.
 
-
 ## 🌐 Interfaccia Grafica e Logica Avanzata (Node-RED)
 
 L'automazione in Python è stata sostituita e potenziata tramite **Node-RED**, un motore logico visivo che funge sia da "cervello" del sistema che da interfaccia grafica SCADA (Supervisory Control And Data Acquisition).
 
 **Accesso al Sistema:**
-* Motore: si avvia da terminale con il comando `node-red`
-* Editor Visivo: `http://127.0.0.1:1880`
-* Dashboard Web: `http://127.0.0.1:1880/dashboard` (creata tramite il pacchetto `@flowfuse/node-red-dashboard`)
+- Motore: si avvia da terminale con il comando `node-red`
+- Editor Visivo: `http://127.0.0.1:1880`
+- Dashboard Web: `http://127.0.0.1:1880/dashboard` (creata tramite il pacchetto `@flowfuse/node-red-dashboard`)
 
 **Logica del Flusso (Macchina a Stati e Override):**
 Node-RED gestisce in contemporanea le decisioni automatiche e i comandi manuali, prevenendo conflitti tramite un sistema di priorità:
 1. **Automazione:** I valori in arrivo dal topic `laboratorio/sensori` vengono passati in un nodo `switch`. Se il `msg.payload` è `< 300`, viene inviato il comando `ON` al LED, altrimenti `OFF`.
 2. **Memoria di Stato:** Quando l'utente aziona l'interruttore dalla Dashboard, il nuovo stato ("ON" o "OFF") viene salvato nella memoria a lungo termine di Node-RED, all'interno della variabile globale `flow.stato_manuale`.
 3. **Cancello Logico (Override):** I dati in arrivo dal sensore passano prima attraverso un nodo `switch` di blocco che legge la memoria `flow`. Se la variabile contiene "ON", la regola di sbarramento (`!= ON`) distrugge i dati del sensore. Questo meccanismo garantisce che il comando manuale abbia la priorità assoluta sull'automazione ambientale.
-
 
 ### 📱 Accesso da Smartphone (Rete Locale)
 
@@ -115,18 +128,19 @@ Poiché il server Node-RED e il Broker MQTT sono ospitati sul PC Linux (il nostr
 2. Apri il browser sullo smartphone e digita l'indirizzo usando l'IP appena trovato: 
    `http://<IP_DEL_PC_LINUX>:1880/dashboard`
 
-
 ## 📡 Nodo Sensore Distribuito (ESP8266)
 
 L'architettura è stata espansa verso un vero ecosistema IoT distribuito ("Triangolo IoT") introducendo un microcontrollore **ESP8266 (NodeMCU)** con connettività Wi-Fi nativa.
 
-* **Ruolo:** Agisce come nodo sensore remoto puro. Raccoglie dati ambientali (es. temperatura) e li pubblica sul Broker via Wi-Fi.
-* **Topic MQTT:** `laboratorio/esp/temperatura`
-* **Logica Distribuita:** L'ESP8266 funziona solo come *Publisher*. Il PC Linux (Node-RED) riceve le letture, popola la Dashboard e gestisce la logica decisionale, mentre l'Arduino (in ascolto come *Subscriber*) si occupa solo di eseguire le azioni fisiche.
+- **Ruolo:** Agisce come nodo sensore remoto puro. Raccoglie dati ambientali (es. temperatura) e li pubblica sul Broker via Wi-Fi.
+- **Topic MQTT:** `laboratorio/esp/temperatura`
+- **Logica Distribuita:** L'ESP8266 funziona solo come *Publisher*. Il PC Linux (Node-RED) riceve le letture, popola la Dashboard e gestisce la logica decisionale, mentre l'Arduino (in ascolto come *Subscriber*) si occupa solo di eseguire le azioni fisiche.
 
 *Nota hardware: Il modulo ESP8266 utilizza l'antenna a 2.4 GHz, pertanto l'infrastruttura di rete (router o hotspot) deve supportare questa banda per consentire la connessione.*
 
-i# Progetti 4 e 5: Da Metronomo Offline a Dispositivo IoT
+---
+
+# Progetti 4 e 5: Da Metronomo Offline a Dispositivo IoT
 
 Questo repository contiene due evoluzioni di un metronomo digitale sviluppato su **Arduino UNO R4 WiFi**. Il progetto parte da una logica hardware basata sul calcolo dei tempi di pressione (Progetto 4) per poi evolversi in un vero e proprio dispositivo IoT connesso in rete e controllabile via web (Progetto 5).
 
@@ -158,7 +172,7 @@ Il Progetto 5 prende la base hardware ed elettronica del Progetto 4 e la espande
 
 ### Prerequisiti
 *   Libreria ufficiale: `<WiFiS3.h>`
-*   Modifica delle variabili globali nel codice per inserire le credenziali della propria rete (`ssid` e `pass`).
+*   **Gestione Sicura Wi-Fi:** Creazione del file `secrets.h` (partendo da `secrets_template.h`) per definire nome rete e password senza esporli nel codice.
 *   Pagina HTML/JS (Dashboard) da avviare in locale per interfacciarsi comodamente con le API.
 
 ### Architettura Server e CORS
@@ -177,6 +191,8 @@ Il web server su Arduino (in ascolto sulla porta 80) implementa un ciclo di lett
 | **GET** | `/bpm/max/` | Restituisce il valore del BPM più alto mai registrato dall'accensione. |
 | **DELETE** | `/bpm/max/` | Azzera la variabile globale del record massimo (imposta a 0). |
 
+---
+
 # Progetto 6: Metronomo IoT con MQTT e Node-RED Dashboard 2.0 (progetto6_metronomo_mqtt)
 
 ## 📖 Descrizione
@@ -186,24 +202,24 @@ Questo progetto consiste in un metronomo basato su Arduino, controllabile e moni
 
 ### 1. Hardware (Arduino)
 L'unità fisica gestisce la generazione del battito (BPM) e le modalità operative:
-* **Pulsante MODE:** Permette di passare dalla modalità di esecuzione (PLAY) alla modalità di acquisizione/apprendimento (REC/Learn).
-* **LED di Stato:** Feedback visivo fisico sulla breadboard (es. Verde per PLAY, Rosso per REC).
-* **Client MQTT:** Invia lo stato attuale e si mette in ascolto dei nuovi BPM in arrivo.
+- **Pulsante MODE:** Permette di passare dalla modalità di esecuzione (PLAY) alla modalità di acquisizione/apprendimento (REC/Learn).
+- **LED di Stato:** Feedback visivo fisico sulla breadboard (es. Verde per PLAY, Rosso per REC).
+- **Client MQTT:** Invia lo stato attuale e si mette in ascolto dei nuovi BPM in arrivo.
 
 ### 2. Software (Node-RED)
 L'interfaccia di controllo è stata sviluppata utilizzando **Node-RED Dashboard 2.0** (`@flowfuse/node-red-dashboard`).
-* **Input BPM:** Un modulo `ui-form` ottimizzato graficamente per inviare il valore numerico dei BPM desiderati tramite un pulsante dedicato.
-* **Monitoraggio:** Testi dinamici (`ui-text`) che mostrano BPM attuali, BPM Minimo e BPM Massimo.
-* **Feedback Visivo:** Un indicatore `ui-led` che si accende di rosso quando l'hardware entra in modalità REC.
-* **Stile Custom:** Utilizzo del nodo `ui-template` e classi CSS/Vuetify (es. `d-flex`, `justify-center`) per impaginare i componenti in griglie affiancate e personalizzare l'allineamento.
+- **Input BPM:** Un modulo `ui-form` ottimizzato graficamente per inviare il valore numerico dei BPM desiderati tramite un pulsante dedicato.
+- **Monitoraggio:** Testi dinamici (`ui-text`) che mostrano BPM attuali, BPM Minimo e BPM Massimo.
+- **Feedback Visivo:** Un indicatore `ui-led` che si accende di rosso quando l'hardware entra in modalità REC.
+- **Stile Custom:** Utilizzo del nodo `ui-template` e classi CSS/Vuetify (es. `d-flex`, `justify-center`) per impaginare i componenti in griglie affiancate e personalizzare l'allineamento.
 
 ## 📡 Topic MQTT Configurati
 
 Il broker MQTT fa da ponte tra Node-RED e Arduino utilizzando i seguenti topic:
 
-* `metronomo/bpm/set` (Sottoscrizione Arduino / Pubblicazione Node-RED): 
+- `metronomo/bpm/set` (Sottoscrizione Arduino / Pubblicazione Node-RED): 
   Utilizzato per inviare il nuovo valore di BPM dalla dashboard all'hardware.
-* `metronomo/stato/rec` (Pubblicazione Arduino / Sottoscrizione Node-RED): 
+- `metronomo/stato/rec` (Pubblicazione Arduino / Sottoscrizione Node-RED): 
   Invia le stringhe testuali `"ON"` o `"OFF"` quando si preme il pulsante MODE, permettendo al nodo LED sulla dashboard di aggiornarsi in tempo reale.
 
 ## 🚀 Requisiti e Dipendenze (Node-RED)
@@ -213,10 +229,12 @@ Per far funzionare correttamente il flusso importato su Node-RED, è necessario 
 
 ## ⚙️ Layout e Personalizzazione UI
 Il progetto include modifiche al layout standard di Node-RED Dashboard 2.0:
-* Utilizzo del pannello **Layout** per l'organizzazione in gruppi e la spaziatura manuale (tramite le proporzioni `Size`, es. 3x1, 6x1).
-* Modifiche CSS custom per allineare caselle di testo e pulsanti sulla stessa riga e centrare gli elementi chiave per una migliore User Experience.
+- Utilizzo del pannello **Layout** per l'organizzazione in gruppi e la spaziatura manuale (tramite le proporzioni `Size`, es. 3x1, 6x1).
+- Modifiche CSS custom per allineare caselle di testo e pulsanti sulla stessa riga e centrare gli elementi chiave per una migliore User Experience.
 
-# 🎵 Proetto7 - Metronomo IoT (Arduino UNO R4 WiFi + Node-RED)
+---
+
+# 🎵 Progetto 7 - Metronomo IoT (Arduino UNO R4 WiFi + Node-RED)
 
 Questo progetto trasforma un **Arduino UNO R4 WiFi** in un metronomo intelligente e connesso. Può essere controllato interamente tramite pulsanti fisici oppure da remoto attraverso una comoda interfaccia web (Dashboard) basata su **Node-RED** via protocollo MQTT.
 
@@ -226,11 +244,11 @@ Il sistema è progettato per essere **resiliente**: funziona perfettamente anche
 
 ## ✨ Funzionalità Principali
 
-* 📶 **Controllo Bidirezionale:** Sincronizzazione in tempo reale tra hardware fisico e Dashboard Node-RED.
-* 🥁 **Tap Tempo (Smart):** Calcola automaticamente i BPM battendo il tempo (minimo 4 tap). Attivabile da pulsante fisico o da web.
-* 📴 **Modalità Offline Nativa:** Codice non bloccante. Se non c'è WiFi, il metronomo si avvia offline e cerca la rete in background ogni 5 secondi senza bloccare l'esecuzione.
-* 🔊 **Gestione Audio (Mute):** Cicalino piezoelettrico attivabile/disattivabile a piacimento.
-* 💡 **Feedback Visivo Ricco:**
+- 📶 **Controllo Bidirezionale:** Sincronizzazione in tempo reale tra hardware fisico e Dashboard Node-RED.
+- 🥁 **Tap Tempo (Smart):** Calcola automaticamente i BPM battendo il tempo (minimo 4 tap). Attivabile da pulsante fisico o da web.
+- 📴 **Modalità Offline Nativa:** Codice non bloccante. Se non c'è WiFi, il metronomo si avvia offline e cerca la rete in background ogni 5 secondi senza bloccare l'esecuzione.
+- 🔊 **Gestione Audio (Mute):** Cicalino piezoelettrico attivabile/disattivabile a piacimento.
+- 💡 **Feedback Visivo Ricco:**
   * **LCD 16x2:** Mostra lo stato del WiFi, la modalità (PLAY/REC), lo stato dell'audio e i BPM.
   * **Matrice LED (UNO R4):** Mostra un'icona a forma di nota musicale quando il suono è attivo; si spegne quando è muto.
   * **LED Esterni:** LED Verde (lampeggia a tempo con i BPM), LED Rosso (indica la modalità REC/Apprendimento attiva).
@@ -239,11 +257,11 @@ Il sistema è progettato per essere **resiliente**: funziona perfettamente anche
 
 ## 🛠️ Requisiti Hardware
 
-* **Scheda:** Arduino UNO R4 WiFi
-* **Display:** LCD 16x2 (collegamento parallelo standard) con potenziometro per il contrasto.
-* **Audio:** 1x Cicalino Piezoelettrico (Piezo Buzzer).
-* **Indicatori Visivi:** 1x LED Verde, 1x LED Rosso (con resistenze da 220Ω).
-* **Controlli:** 3x Pulsanti tattili (per Mode, Tap e Suono).
+- **Scheda:** Arduino UNO R4 WiFi
+- **Display:** LCD 16x2 (collegamento parallelo standard) con potenziometro per il contrasto.
+- **Audio:** 1x Cicalino Piezoelettrico (Piezo Buzzer).
+- **Indicatori Visivi:** 1x LED Verde, 1x LED Rosso (con resistenze da 220Ω).
+- **Controlli:** 3x Pulsanti tattili (per Mode, Tap e Suono).
 
 ### 🔌 Schema Collegamenti (Pinout)
 
@@ -265,7 +283,7 @@ Il sistema è progettato per essere **resiliente**: funziona perfettamente anche
 
 ## 💻 Software e Librerie
 
-Assicurati di avere installato le seguenti librerie tramite il Library Manager dell'IDE di Arduino:
+Assicurati di avere installato le seguenti librerie tramite il Library Manager dell'IDE di Arduino, oltre a configurare le credenziali di rete tramite il file `secrets.h`:
 
 1. `WiFiS3` (Inclusa nel core dell'UNO R4)
 2. `PubSubClient` (Per la comunicazione MQTT)
@@ -279,16 +297,16 @@ Assicurati di avere installato le seguenti librerie tramite il Library Manager d
 Il sistema si interfaccia con un broker MQTT (es. Mosquitto) e si aspetta la seguente struttura di Topic per la comunicazione con Node-RED:
 
 ### 📥 Topic sottoscritti da Arduino (Comandi RX)
-* `metronomo/bpm/set` : Riceve un numero (es. `120`) per impostare i BPM in riproduzione.
-* `metronomo/suono/set` : Riceve `ON`, `OFF`, `TRUE`, `FALSE`, `1` o `0` per attivare/disattivare il buzzer.
-* `metronomo/stato/set` : Riceve qualsiasi messaggio (es. `TOGGLE`) per entrare o uscire dalla modalità REC.
-* `metronomo/tap/set` : Riceve qualsiasi messaggio per registrare un battito del Tap Tempo (solo se in mod. REC).
+- `metronomo/bpm/set` : Riceve un numero (es. `120`) per impostare i BPM in riproduzione.
+- `metronomo/suono/set` : Riceve `ON`, `OFF`, `TRUE`, `FALSE`, `1` o `0` per attivare/disattivare il buzzer.
+- `metronomo/stato/set` : Riceve qualsiasi messaggio (es. `TOGGLE`) per entrare o uscire dalla modalità REC.
+- `metronomo/tap/set` : Riceve qualsiasi messaggio per registrare un battito del Tap Tempo (solo se in mod. REC).
 
 ### 📤 Topic pubblicati da Arduino (Telemetria TX)
-* `metronomo/bpm` : Invia il BPM attuale (utile per la Dashboard).
-* `metronomo/bpm/min` & `metronomo/bpm/max` : Invia statistiche dei BPM registrati.
-* `metronomo/suono/stato` : Invia `ON` o `OFF` quando lo stato del suono cambia fisicamente (sincronizza l'interruttore web).
-* `metronomo/stato/rec` : Invia `ON` o `OFF` per indicare lo stato della modalità Apprendimento.
+- `metronomo/bpm` : Invia il BPM attuale (utile per la Dashboard).
+- `metronomo/bpm/min` & `metronomo/bpm/max` : Invia statistiche dei BPM registrati.
+- `metronomo/suono/stato` : Invia `ON` o `OFF` quando lo stato del suono cambia fisicamente (sincronizza l'interruttore web).
+- `metronomo/stato/rec` : Invia `ON` o `OFF` per indicare lo stato della modalità Apprendimento.
 
 ### 📦 Importare la Dashboard
 Se hai esportato il flusso di Node-RED in formato `.json`, puoi reimportarlo facilmente dal menu di Node-RED andando su **Menu (tre linee) > Import** e selezionando il file del progetto.
@@ -297,7 +315,7 @@ Se hai esportato il flusso di Node-RED in formato `.json`, puoi reimportarlo fac
 
 ## 🚀 Guida all'uso
 
-1. **Accensione:** Alimenta l'Arduino. Sul display apparirà "Avvio Metronomo". La scheda proverà a connettersi al WiFi per 5 secondi. Se ci riesce, si collega ad MQTT; in caso contrario, avvia la **Modalità Offline** e il metronomo è subito utilizzabile.
+1. **Accensione:** Alimenta l'Arduino. Sul display apparirà "Avvio Metronomo". La scheda proverà a connettersi al WiFi per 5 secondi (leggendo i dati da `secrets.h`). Se ci riesce, si collega ad MQTT; in caso contrario, avvia la **Modalità Offline** e il metronomo è subito utilizzabile.
 2. **Impostare i BPM:** Puoi inviare il valore numerico dalla Dashboard Node-RED.
 3. **Tap Tempo:** 
    * Premi il tasto fisico **MODE** (o il bottone *Modalità REC/PLAY* sulla Dashboard). Il LED Rosso si accende.
